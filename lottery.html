@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>冰雪面膜打卡抽獎活動！</title>
+    <style>
+        /* --- 視覺風格設定 (維持暗黑科技風) --- */
+        body {
+            background-color: #0f0f13;
+            background-image: radial-gradient(circle at center, #1a1a24 0%, #000 100%);
+            color: #ffffff;
+            font-family: "Microsoft JhengHei", "Heiti TC", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* 標題區 */
+        header {
+            text-align: center;
+            z-index: 10;
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: #ffd700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+            font-size: 2.8rem;
+            margin: 0 0 10px 0;
+            letter-spacing: 3px;
+        }
+        .subtitle {
+            color: #aaa;
+            font-size: 1.1rem;
+            background: rgba(255, 215, 0, 0.1);
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        /* 通用面板樣式 */
+        .panel {
+            background: rgba(30, 30, 40, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            text-align: center;
+            width: 90%;
+            max-width: 700px;
+            transition: all 0.3s ease;
+        }
+
+        /* 設定與輸入區 */
+        #setupPanel textarea {
+            width: 100%;
+            height: 120px;
+            background: #222;
+            color: #ddd;
+            border: 1px solid #444;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 10px;
+            font-family: monospace;
+            resize: vertical;
+        }
+        .input-group { margin: 15px 0; color: #ccc; }
+        .input-group input {
+            background: #222; border: 1px solid #555; color: #ffd700;
+            padding: 8px; border-radius: 5px; width: 70px; text-align: center; font-size: 1.1rem; font-weight: bold;
+        }
+        
+        /* 按鈕樣式 */
+        .btn-gold {
+            background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+            border: none; padding: 15px 50px; color: #000; font-size: 1.3rem; font-weight: 900;
+            border-radius: 50px; cursor: pointer; transition: all 0.2s;
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
+            outline: none;
+        }
+        .btn-gold:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 10px 30px rgba(255, 215, 0, 0.5); }
+        .btn-gold:active { transform: translateY(1px); }
+        .btn-secondary {
+            background: transparent; border: 2px solid #555; color: #ccc; padding: 10px 30px;
+            border-radius: 30px; cursor: pointer; font-size: 1rem; margin-top: 20px; transition: all 0.2s;
+        }
+        .btn-secondary:hover { border-color: #ccc; color: #fff; background: rgba(255,255,255,0.1); }
+
+        /* 抽獎主舞台 */
+        #stagePanel { display: none; flex-direction: column; align-items: center; }
+
+        /* 滾動視窗 (老虎機效果) */
+        .roller-container {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(180deg, #000 0%, #1a1a1a 50%, #000 100%);
+            border-top: 3px solid #cba300;
+            border-bottom: 3px solid #cba300;
+            display: flex; justify-content: center; align-items: center;
+            margin-bottom: 30px;
+            position: relative; overflow: hidden;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+        }
+        #currentName {
+            font-size: 4rem; font-weight: 900; color: #555;
+            transition: color 0.1s, text-shadow 0.1s, transform 0.1s;
+        }
+        /* 中獎時的高亮樣式 */
+        .highlight {
+            color: #ffd700 !important;
+            text-shadow: 0 0 40px rgba(255, 215, 0, 1), 0 0 10px #fff;
+            transform: scale(1.1);
+        }
+
+        /* 進度條 */
+        .progress-info { font-size: 1.2rem; color: #aaa; margin-bottom: 25px; }
+        .progress-count { color: #ffd700; font-weight: bold; font-size: 1.5rem; }
+
+        /* 即時中獎名單展示區 (抽獎過程用) */
+        .live-winners-grid {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
+            width: 100%; max-height: 350px; overflow-y: auto; padding: 10px;
+            /* 隱藏卷軸 */
+            scrollbar-width: none; -ms-overflow-style: none;
+        }
+        .live-winners-grid::-webkit-scrollbar { display: none; }
+        
+        /* 個別中獎卡片 (抽獎過程) */
+        .winner-card-live {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            padding: 8px 20px; border-radius: 30px; font-size: 1.1rem;
+            animation: slideUp 0.4s ease-out forwards;
+            opacity: 0; transform: translateY(20px);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .winner-card-live.new { background: rgba(255, 215, 0, 0.3); border-color: #ffd700; }
+        .rank-badge {
+            background: #ffd700; color: #000; width: 28px; height: 28px;
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            font-size: 0.9rem; font-weight: 900; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        /* 最終統計面板 */
+        #summaryPanel { display: none; }
+        .summary-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .summary-card {
+            background: linear-gradient(45deg, rgba(255,215,0,0.1), rgba(255,215,0,0.05));
+            border: 1px solid #ffd700;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: fadeIn 0.8s ease forwards;
+        }
+        .prize-count { color: #ffd700; font-weight: bold; font-size: 1.4rem; margin-left: 10px;}
+
+        /* 動畫定義 */
+        @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>✨ 冰雪面膜打卡抽獎活動！ ✨</h1>
+        <div class="subtitle" id="headerStats">準備中...</div>
+    </header>
+
+    <div id="setupPanel" class="panel">
+        <h2>步驟 1: 資料匯入 (後台)</h2>
+        <p style="color:#888; font-size:0.9rem;">姓名與票數<br><strong></strong></p>
+        <textarea id="inputData" placeholder="例如：
+陳雅鈴	30
+Hazel	30
+小甜心	29"></textarea>
+        <div class="input-group">
+            <label>預計抽出獎項數量：</label>
+            <input type="number" id="winnerCountTarget" value="38" min="1">
+        </div>
+        <button class="btn-gold" onclick="initLottery()">鎖定名單並前往舞台</button>
+    </div>
+
+    <div id="stagePanel" class="panel">
+        <div class="roller-container">
+            <div id="currentName">READY</div>
+        </div>
+
+        <div class="progress-info">
+            抽獎進度: <span class="progress-count" id="drawnCount">0</span> / <span id="totalTargetDisplay">38</span>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" class="btn-gold" onclick="startDrawCycle()">🎬 開始連續抽獎</button>
+            <button id="viewSummaryBtn" class="btn-gold" style="display:none;" onclick="showSummary()">📊 查看最終獲獎統計</button>
+        </div>
+
+        <div class="live-winners-grid" id="liveWinnersList">
+            </div>
+    </div>
+
+    <div id="summaryPanel" class="panel">
+        <h2 style="color:#ffd700">🎉 最終獲獎名單統計 🎉</h2>
+        <p>恭喜以下幸運得主獲得面膜！</p>
+        
+        <div class="summary-list" id="summaryGrid">
+            </div>
+
+        <button class="btn-secondary" onclick="exportSummaryCSV()">匯出統計 CSV</button>
+    </div>
+
+    <script>
+        // --- 核心邏輯 (JavaScript) ---
+        
+        let ticketPool = []; // 票倉 (包含重複名字的陣列)
+        let totalWinnersNeeded = 38;
+        let winnersSequence = []; // 紀錄中獎順序的陣列 (存姓名)
+        let isDrawing = false;
+        
+        // 初始化：讀取資料並建立票倉
+        function initLottery() {
+            const rawText = document.getElementById('inputData').value.trim();
+            totalWinnersNeeded = parseInt(document.getElementById('winnerCountTarget').value);
+            
+            if (!rawText) { alert("請輸入資料！"); return; }
+            if (totalWinnersNeeded <= 0) { alert("抽出數量必須大於 0！"); return; }
+            
+            ticketPool = [];
+            let participantCount = 0;
+            
+            const rows = rawText.split('\n');
+            rows.forEach(row => {
+                // 相容 Tab 或逗號/空白分隔
+                let parts = row.split(/\t|[,\s]+/);
+                // 簡單過濾空行
+                if (parts.length >= 2) {
+                    let name = parts[0].trim();
+                    // 嘗試抓取最後一個部分當作數字
+                    let tickets = parseInt(parts[parts.length-1]); 
+                    
+                    if (name && !isNaN(tickets) && tickets > 0) {
+                        // 【核心算法】依照票數將名字重複加入票倉
+                        for (let i = 0; i < tickets; i++) {
+                            ticketPool.push(name);
+                        }
+                        participantCount++;
+                    }
+                }
+            });
+
+            if (ticketPool.length < totalWinnersNeeded) {
+                alert(`錯誤：總票數 (${ticketPool.length}) 少於 預計抽出人數 (${totalWinnersNeeded})！`);
+                return;
+            }
+
+            // 切換介面
+            document.getElementById('setupPanel').style.display = 'none';
+            document.getElementById('stagePanel').style.display = 'flex';
+            
+            // 更新 header 的統計資訊 (隱私安全，只顯示總數)
+            document.getElementById('headerStats').innerText = `總參與人數：${participantCount} 人 | 面膜打卡總數：${ticketPool.length}`;
+            document.getElementById('totalTargetDisplay').innerText = totalWinnersNeeded;
+        }
+
+        // 開始自動抽獎流程
+        async function startDrawCycle() {
+            if (isDrawing) return;
+            document.getElementById('startBtn').style.display = 'none';
+            isDrawing = true;
+            
+            // 啟動遞迴抽獎
+            await drawNextWinner();
+        }
+
+        // 抽一位中獎者的非同步函數
+        async function drawNextWinner() {
+            if (winnersSequence.length >= totalWinnersNeeded) {
+                finishDrawProcess();
+                return;
+            }
+
+            const nameDisplay = document.getElementById('currentName');
+            nameDisplay.classList.remove('highlight');
+            nameDisplay.style.color = "#555";
+
+            // A. 滾動動畫效果 (增加緊張感)
+            let rollDuration = 300; // 滾動時間 (毫秒) - 想要快一點可以縮短這裡
+            let steps = 10; // 變換幾次名字
+            
+            for (let i = 0; i < steps; i++) {
+                let randomPreview = ticketPool[Math.floor(Math.random() * ticketPool.length)];
+                nameDisplay.innerText = randomPreview;
+                // 暫停一小段時間製造視覺殘留
+                await new Promise(r => setTimeout(r, rollDuration / steps));
+            }
+
+            // B. 【核心抽籤】決定中獎者
+            let winningIndex = Math.floor(Math.random() * ticketPool.length);
+            let winnerName = ticketPool[winningIndex];
+            
+            // 重要：抽出後，該張票作廢 (從池中移除)，但該人的其他票還在 (可重複中獎)
+            ticketPool.splice(winningIndex, 1);
+            winnersSequence.push(winnerName);
+
+            // C. 顯示中獎結果
+            nameDisplay.innerText = winnerName;
+            nameDisplay.classList.add('highlight');
+            
+            // 更新下方列表和進度
+            updateLiveWinnersList(winnerName);
+            document.getElementById('drawnCount').innerText = winnersSequence.length;
+
+            // 暫停一下讓大家看清楚是誰中獎 (500ms)
+            await new Promise(r => setTimeout(r, 500));
+            
+            // 繼續抽下一位
+            drawNextWinner();
+        }
+
+        // 更新抽獎過程中的即時名單 (只顯示姓名與順序)
+        function updateLiveWinnersList(name) {
+            const list = document.getElementById('liveWinnersList');
+            const rank = winnersSequence.length;
+            
+            const div = document.createElement('div');
+            div.className = 'winner-card-live new';
+            // 這裡刻意不顯示累積次數，保持過程單純
+            div.innerHTML = `<div class="rank-badge">${rank}</div> ${name}`;
+            
+            // 插入到最前面 (最新的在最上面)
+            list.insertBefore(div, list.firstChild);
+            
+            // 移除新加入的特效樣式
+            setTimeout(() => div.classList.remove('new'), 500);
+        }
+
+        // 抽獎結束處理
+        function finishDrawProcess() {
+            isDrawing = false;
+            document.getElementById('currentName').innerText = "🎉 已全數抽出 🎉";
+            document.getElementById('currentName').style.color = "#ffd700";
+            // 顯示查看統計按鈕
+            document.getElementById('viewSummaryBtn').style.display = 'inline-block';
+        }
+
+        // --- 最終統計相關函數 ---
+
+        // 顯示統計面板
+        function showSummary() {
+            // 隱藏舞台，顯示統計
+            document.getElementById('stagePanel').style.display = 'none';
+            document.getElementById('summaryPanel').style.display = 'block';
+            document.getElementById('headerStats').innerText = "獲獎統計結果";
+
+            // 計算每個人中獎次數
+            let summaryCounts = {};
+            winnersSequence.forEach(name => {
+                summaryCounts[name] = (summaryCounts[name] || 0) + 1;
+            });
+
+            const grid = document.getElementById('summaryGrid');
+            grid.innerHTML = ''; // 清空
+
+            // 產生統計卡片
+            for (let [name, count] of Object.entries(summaryCounts)) {
+                let card = document.createElement('div');
+                card.className = 'summary-card';
+                // 符合使用者要求的格式
+                card.innerHTML = `<span>${name}</span> <div>共獲得 <span class="prize-count">${count}</span> 片面膜</div>`;
+                grid.appendChild(card);
+            }
+        }
+
+        // 匯出 CSV 功能 (給主辦方存檔用)
+        function exportSummaryCSV() {
+            let summaryCounts = {};
+            winnersSequence.forEach(name => {
+                summaryCounts[name] = (summaryCounts[name] || 0) + 1;
+            });
+
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // BOM
+            csvContent += "姓名,總獲獎數(面膜片數)\n";
+            
+            for (let [name, count] of Object.entries(summaryCounts)) {
+                 csvContent += `${name},${count}\n`;
+            }
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "最終獲獎統計.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
